@@ -115,7 +115,8 @@ def cfg_and_imports():
 @app.cell
 def load_data(cfg, cv2, np, plt, Path):
     """Ячейка 1: Загрузка данных — чтение серии 16-bit PNG"""
-    data_dir = Path(cfg["data_dir"])
+    # Путь от расположения ноутбука, а не от cwd
+    data_dir = (Path(__file__).parent / cfg["data_dir"]).resolve()
     # Ищем PNG файлы, сортируем по имени
     png_files = sorted(data_dir.glob("*.png"))
     assert len(png_files) > 0, f"Нет PNG файлов в {data_dir}"
@@ -325,9 +326,8 @@ def detection(stack_filtered, stack_binary, cfg, cv2, np, plt, Droplet):
 
 
 @app.cell
-def sharpness_filter(detections, stack_filtered, cfg, np, plt, cv2, Droplet):
+def sharpness_filter(detections, stack_filtered, cfg, np, plt, cv2, Droplet, gaussian_laplace):
     """Ячейка 6: Фильтр резкости — LoG метрика, адаптивный порог"""
-    from scipy.ndimage import gaussian_laplace
 
     sigma = cfg["sharpness_log_sigma"]
     N = stack_filtered.shape[0]
