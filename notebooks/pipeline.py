@@ -14,8 +14,6 @@ def cfg_and_imports():
 
     import cv2
     import numpy as np
-    import matplotlib
-    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from scipy import ndimage
     from scipy.ndimage import gaussian_laplace
@@ -141,6 +139,7 @@ def load_data(cfg, cv2, np, plt, Path):
     ax_load.set_title(f"Первый кадр: {png_files[0].name}", fontsize=11)
     ax_load.axis("off")
     plt.tight_layout()
+    plt.show()
 
     return stack, png_files, fig_load
 
@@ -158,25 +157,26 @@ def background_subtraction(stack, np, plt):
 
     # Визуализация: фон, исходный кадр, кадр после вычитания
     fig_bg, axes_bg = plt.subplots(1, 3, figsize=(15, 5))
-    idx = 0  # показываем первый кадр
+    _idx = 0  # показываем первый кадр
 
     p1_bg, p99_bg = np.percentile(background, [1, 99])
     axes_bg[0].imshow(background, cmap="gray", vmin=p1_bg, vmax=p99_bg)
     axes_bg[0].set_title("Фон B(x,y)")
     axes_bg[0].axis("off")
 
-    p1_src, p99_src = np.percentile(stack[idx], [1, 99])
-    axes_bg[1].imshow(stack[idx], cmap="gray", vmin=p1_src, vmax=p99_src)
-    axes_bg[1].set_title(f"Исходный кадр {idx}")
+    p1_src, p99_src = np.percentile(stack[_idx], [1, 99])
+    axes_bg[1].imshow(stack[_idx], cmap="gray", vmin=p1_src, vmax=p99_src)
+    axes_bg[1].set_title(f"Исходный кадр {_idx}")
     axes_bg[1].axis("off")
 
-    p1_nb, p99_nb = np.percentile(stack_no_bg[idx], [1, 99])
-    axes_bg[2].imshow(stack_no_bg[idx], cmap="gray", vmin=p1_nb, vmax=p99_nb)
+    p1_nb, p99_nb = np.percentile(stack_no_bg[_idx], [1, 99])
+    axes_bg[2].imshow(stack_no_bg[_idx], cmap="gray", vmin=p1_nb, vmax=p99_nb)
     axes_bg[2].set_title("После вычитания фона")
     axes_bg[2].axis("off")
 
     plt.suptitle("Этап 2: Вычитание фона", fontsize=12)
     plt.tight_layout()
+    plt.show()
 
     return stack_no_bg, background, fig_bg
 
@@ -196,20 +196,21 @@ def filtering(stack_no_bg, cfg, cv2, np, plt):
         stack_filtered[i] = filtered.astype(np.float32) / 255.0
 
     # Визуализация: до/после для среднего кадра
-    idx = N // 2
+    _idx = N // 2
     fig_filt, axes_filt = plt.subplots(1, 2, figsize=(12, 5))
 
-    p1_a, p99_a = np.percentile(stack_no_bg[idx], [1, 99])
-    axes_filt[0].imshow(stack_no_bg[idx], cmap="gray", vmin=p1_a, vmax=p99_a)
-    axes_filt[0].set_title(f"До фильтрации (кадр {idx})")
+    p1_a, p99_a = np.percentile(stack_no_bg[_idx], [1, 99])
+    axes_filt[0].imshow(stack_no_bg[_idx], cmap="gray", vmin=p1_a, vmax=p99_a)
+    axes_filt[0].set_title(f"До фильтрации (кадр {_idx})")
     axes_filt[0].axis("off")
 
-    axes_filt[1].imshow(stack_filtered[idx], cmap="gray", vmin=0, vmax=1)
+    axes_filt[1].imshow(stack_filtered[_idx], cmap="gray", vmin=0, vmax=1)
     axes_filt[1].set_title(f"После медианного фильтра {k}×{k} + нормализация")
     axes_filt[1].axis("off")
 
     plt.suptitle("Этап 3: Фильтрация и нормализация", fontsize=12)
     plt.tight_layout()
+    plt.show()
 
     return stack_filtered, fig_filt
 
@@ -227,18 +228,18 @@ def binarization(stack_filtered, cv2, np, plt):
         stack_binary[i] = binary > 0
 
     # Визуализация: бинарный кадр + контуры на исходном
-    idx = 0
-    frame_8u_vis = (stack_filtered[idx] * 255).astype(np.uint8)
+    _idx = 0
+    frame_8u_vis = (stack_filtered[_idx] * 255).astype(np.uint8)
     contours_vis, _ = cv2.findContours(
-        stack_binary[idx].astype(np.uint8) * 255,
+        stack_binary[_idx].astype(np.uint8) * 255,
         cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
     frame_with_contours = cv2.cvtColor(frame_8u_vis, cv2.COLOR_GRAY2BGR)
     cv2.drawContours(frame_with_contours, contours_vis, -1, (0, 255, 0), 1)
 
     fig_bin, axes_bin = plt.subplots(1, 2, figsize=(12, 5))
-    axes_bin[0].imshow(stack_binary[idx], cmap="gray")
-    axes_bin[0].set_title(f"Бинарный кадр {idx} (Otsu)")
+    axes_bin[0].imshow(stack_binary[_idx], cmap="gray")
+    axes_bin[0].set_title(f"Бинарный кадр {_idx} (Otsu)")
     axes_bin[0].axis("off")
 
     axes_bin[1].imshow(cv2.cvtColor(frame_with_contours, cv2.COLOR_BGR2RGB))
@@ -247,6 +248,7 @@ def binarization(stack_filtered, cv2, np, plt):
 
     plt.suptitle("Этап 4: Бинаризация", fontsize=12)
     plt.tight_layout()
+    plt.show()
 
     return stack_binary, fig_bin
 
@@ -308,19 +310,20 @@ def detection(stack_filtered, stack_binary, cfg, cv2, np, plt, Droplet):
         detections.append(frame_drops)
 
     # Визуализация: все blob-ы на первом кадре
-    idx = 0
-    frame_8u_vis = (stack_filtered[idx] * 255).astype(np.uint8)
+    _idx = 0
+    frame_8u_vis = (stack_filtered[_idx] * 255).astype(np.uint8)
     vis_rgb = cv2.cvtColor(frame_8u_vis, cv2.COLOR_GRAY2BGR)
-    for d in detections[idx]:
+    for d in detections[_idx]:
         cv2.drawContours(vis_rgb, [d.contour], -1, (0, 200, 0), 1)
         cv2.circle(vis_rgb, (int(d.centroid_x), int(d.centroid_y)), 2, (0, 0, 255), -1)
 
     total_all = sum(len(f) for f in detections)
     fig_det, ax_det = plt.subplots(figsize=(10, 7))
     ax_det.imshow(cv2.cvtColor(vis_rgb, cv2.COLOR_BGR2RGB))
-    ax_det.set_title(f"Этап 5: Детектирование. Кадр {idx}, капель: {len(detections[idx])}. Всего по серии: {total_all}")
+    ax_det.set_title(f"Этап 5: Детектирование. Кадр {_idx}, капель: {len(detections[_idx])}. Всего по серии: {total_all}")
     ax_det.axis("off")
     plt.tight_layout()
+    plt.show()
 
     return detections, fig_det
 
@@ -380,19 +383,19 @@ def sharpness_filter(detections, stack_filtered, cfg, np, plt, cv2, Droplet, gau
     n_rejected = sum(len(f) for f in droplets_rejected)
 
     # Визуализация: зелёные (in-focus) vs красные (rejected) + гистограмма S
-    idx = 0
-    frame_8u_vis = (stack_filtered[idx] * 255).astype(np.uint8)
+    _idx = 0
+    frame_8u_vis = (stack_filtered[_idx] * 255).astype(np.uint8)
     vis_rgb = cv2.cvtColor(frame_8u_vis, cv2.COLOR_GRAY2BGR)
-    for d in droplets_focused[idx]:
+    for d in droplets_focused[_idx]:
         cv2.drawContours(vis_rgb, [d.contour], -1, (0, 200, 0), 1)
-    for d in droplets_rejected[idx]:
+    for d in droplets_rejected[_idx]:
         cv2.drawContours(vis_rgb, [d.contour], -1, (0, 0, 200), 1)
 
     fig_sharp, axes_sharp = plt.subplots(1, 2, figsize=(14, 6))
     axes_sharp[0].imshow(cv2.cvtColor(vis_rgb, cv2.COLOR_BGR2RGB))
     axes_sharp[0].set_title(
-        f"Кадр {idx}: in-focus (зелёные) = {len(droplets_focused[idx])}, "
-        f"отброшено (красные) = {len(droplets_rejected[idx])}"
+        f"Кадр {_idx}: in-focus (зелёные) = {len(droplets_focused[_idx])}, "
+        f"отброшено (красные) = {len(droplets_rejected[_idx])}"
     )
     axes_sharp[0].axis("off")
 
@@ -406,6 +409,7 @@ def sharpness_filter(detections, stack_filtered, cfg, np, plt, cv2, Droplet, gau
 
     plt.suptitle("Этап 6: Фильтр резкости (LoG)", fontsize=12)
     plt.tight_layout()
+    plt.show()
 
     return droplets_focused, droplets_rejected, threshold, fig_sharp
 
@@ -449,20 +453,20 @@ def measure_sizes(droplets_focused, cfg, np, plt, cv2):
     all_phi = [d.phi for frame in droplets_measured for d in frame if d.phi is not None]
 
     # Визуализация: аннотированный кадр + scatter d vs φ
-    idx = 0
+    _idx = 0
     # Ищем первый кадр с каплями для визуализации
     for _i, frame in enumerate(droplets_measured):
         if frame:
-            idx = _i
+            _idx = _i
             break
 
     fig_meas, axes_meas = plt.subplots(1, 2, figsize=(14, 6))
 
     # Кадр с аннотациями
-    axes_meas[0].set_title(f"Кадр {idx}: аннотации d, φ", fontsize=10)
+    axes_meas[0].set_title(f"Кадр {_idx}: аннотации d, φ", fontsize=10)
     axes_meas[0].set_aspect("equal")
     axes_meas[0].invert_yaxis()
-    for d in droplets_measured[idx]:
+    for d in droplets_measured[_idx]:
         axes_meas[0].plot(d.centroid_x, d.centroid_y, "g+", markersize=6)
         axes_meas[0].annotate(
             f"{d.d_eq_um:.0f}µm\nφ={d.phi:.2f}",
@@ -482,6 +486,7 @@ def measure_sizes(droplets_focused, cfg, np, plt, cv2):
 
     plt.suptitle("Этап 7: Измерение размеров", fontsize=12)
     plt.tight_layout()
+    plt.show()
 
     return droplets_measured, all_d, all_phi, fig_meas
 
@@ -548,6 +553,7 @@ def dispersion_analysis(droplets_measured, np, plt, DispersionResult):
 
         plt.suptitle("Этап 8: Дисперсный состав", fontsize=12)
         plt.tight_layout()
+        plt.show()
 
         # Таблица в терминал
         print("=== Характеристические диаметры ===")
@@ -709,6 +715,7 @@ def ptv(droplets_measured, cfg, np, plt, cv2, Track, stack_filtered):
 
     plt.suptitle("Этап 9: Четырёхкадровый PTV", fontsize=12)
     plt.tight_layout()
+    plt.show()
 
     return tracks, stats, fig_ptv
 
@@ -801,6 +808,7 @@ def velocity_field(tracks, cfg, np, plt, VelocityField, stack_filtered):
 
         plt.tight_layout()
 
+    plt.show()
     return velocity_field_result, fig_vf
 
 
@@ -897,6 +905,7 @@ def sampling_bias_correction(dispersion, tracks, cfg, np, plt, DispersionResult)
             dispersion_corrected = None
             fig_bias = plt.figure()
 
+    plt.show()
     return dispersion_corrected, fig_bias
 
 
@@ -993,6 +1002,7 @@ def summary_report(dispersion, dispersion_corrected, velocity_field_result, np, 
 
     plt.suptitle("Этап 12: Итоговый отчёт", fontsize=13, fontweight="bold")
     plt.tight_layout()
+    plt.show()
 
     # Печать таблицы в терминал
     print(f"\n{'Параметр':<20} {'Без коррекции':>15} {'С коррекцией':>15}")
