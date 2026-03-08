@@ -1,18 +1,47 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Что это за проект
 
-## Project
+Проверка методологии многокадрового анализа теневой съёмки газо-капельных потоков. Цель — не продукт, а исследовательский marimo-ноутбук, который прогоняет полный конвейер обработки на реальных данных. По результатам принимается решение, нужно ли корректировать методологию.
 
-**StartUpResearch** — a Python 3.10 project. The codebase is in early/empty state; source files have not been created yet.
+## Документация
 
-## Environment
+- `docs/REQUIREMENTS.md` — что должен делать ноутбук, какие этапы, какие визуализации
+- `docs/ARCHITECTURE.md` — поток данных, dataclass-ы, конфигурация, заглушки
+- `docs/Методология_разрабатываемого_ПО.md` — формальное описание алгоритма (формулы, критерии, пороги)
+- `docs/Заявка_на_стартап.md` — контекст проекта и обоснование подхода
 
-- Python 3.10, virtual environment at `.venv/`
-- Activate: `source .venv/Scripts/activate` (Windows/bash)
-- Install dependencies: `pip install -r requirements.txt` (once a requirements file exists)
+**Перед написанием или изменением кода — прочитай REQUIREMENTS.md и ARCHITECTURE.md.**
 
-## Tooling
+## Структура проекта
 
-- **Formatter**: Black (configured in PyCharm via `.idea/misc.xml`)
-- Run Black: `black .`
+```
+data/raw/          # 16-bit PNG кадры теневой съёмки (входные данные, не трогать)
+docs/              # Документация
+notebooks/         # Marimo-ноутбук pipeline.py
+output/            # Результаты: графики, промежуточные данные
+src/               # Пусто (задел на будущее, сейчас не используется)
+```
+
+## Правила кода
+
+- Весь код — в одном файле `notebooks/pipeline.py` (marimo-ноутбук)
+- Dataclass-ы и конфигурация определяются в первых ячейках, не в отдельных модулях
+- Каждая ячейка = один этап конвейера из REQUIREMENTS.md (этапы 1–11)
+- Каждая ячейка должна содержать визуализацию промежуточного результата
+- Визуализация: matplotlib, `cmap="gray"` для кадров, `vmin/vmax` по перцентилям (1%, 99%)
+- Типизация: dataclass-ы из ARCHITECTURE.md секция 3 (Droplet, Track, DispersionResult, VelocityField)
+- Все настраиваемые параметры — в dict `cfg` в ячейке 0, не хардкодить в теле алгоритмов
+- Язык комментариев в коде: русский
+- Python 3.10+, зависимости: marimo, opencv-python, numpy, scipy, matplotlib
+
+## Входные данные
+
+Изображения в `data/raw/` — 16-битные PNG, теневая съёмка газо-капельного потока. Камера снимает капли на просвет (backlight). Капли — тёмные объекты на светлом фоне. После вычитания фона и инверсии — светлые объекты на тёмном фоне.
+
+## Что НЕ нужно делать
+
+- Не делать GUI, CLI, отдельные модули в `src/`
+- Не оптимизировать производительность (это проверка концепции)
+- Не добавлять тесты
+- Не усложнять алгоритмы сверх того, что описано в методологии
